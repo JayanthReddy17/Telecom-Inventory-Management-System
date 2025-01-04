@@ -1,39 +1,44 @@
 database:inventory
 tables
 Users
-create table users (
-   uid int auto_increment primary key,
-   userName varchar(50) not null unique,
-   firstName varchar(50) not null,
-   lastName varchar(50) not null,
-   password varchar(100) not null,
-   email varchar(100) not null unique,
-   role enum('Admin','Manager','Staff'),
-   phone_no varchar(15)
+
+
+
+CREATE TABLE Users (
+    UserId int PRIMARY KEY,
+    UserName VARCHAR(100) UNIQUE NOT NULL,
+    Password VARCHAR(255) NOT NULL,
+    FirstName VARCHAR(100) NOT NULL,
+    LastName VARCHAR(100) NOT NULL,
+    Role ENUM('Admin', 'Manager', 'Staff') NOT NULL,
+    Phone VARCHAR(15),
+    Email VARCHAR(100) UNIQUE
 );
 
--- Products
-create table products (
-   pid int auto_increment primary key,
-   pname varchar(100) not null,
-   description text,
-   category varchar(50),
-   model_no varchar(50),
-   serial_no varchar(255) unique,
-   stock_level int,
-   reorder_point int
-);
+products
+CREATE TABLE `product` (
+  `ProductId` bigint(20) UNSIGNED NOT NULL,
+  `ProductName` varchar(255) NOT NULL,
+  `Description` text DEFAULT NULL,
+  `ProductImage` varchar(255) DEFAULT NULL,
+  `ProductCategoryName` varchar(100) DEFAULT NULL,
+  `ModelNumber` varchar(100) DEFAULT NULL,
+  `SerialNumber` varchar(100) DEFAULT NULL,
+  `StockLevel` int(11) DEFAULT NULL,
+  `ReorderPoint` int(11) DEFAULT NULL,
+  `SupplierId` int(11) DEFAULT NULL
+)
 
 -- Suppliers
-create table suppliers (
-   sid int auto_increment primary key,
-   sname varchar(50) not null,
-   semail varchar(100) not null unique,
-   sphone_no varchar(15),
-   order_date date,
-   quantity int not null,
-   status enum('Delivered','InProgress','Shipped')
-);
+CREATE TABLE `supplier` (
+  `SupplierId` int(11) NOT NULL,
+  `SupplierName` varchar(100) NOT NULL,
+  `SupplierMail` varchar(100) NOT NULL,
+  `SupplierContact` varchar(100) DEFAULT NULL,
+  `order_date` date NOT NULL,
+  `quantity` int(11) NOT NULL,
+  `status` enum('Delivered','InProgress','Shipped') NOT NULL
+)
 
 -- Transactions
 create table transactions (
