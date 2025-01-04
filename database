@@ -36,16 +36,17 @@ create table suppliers (
 );
 
 -- Transactions
-create table transactions (
-   tid int auto_increment primary key,
-   pid int not null,
-   uid int not null,
-   quantity int not null,
-   type enum('stock-in','stock-out') not null,
-   timestamp timestamp null default current_timestamp,
-   foreign key (pid) references products(pid) on delete cascade,
-   foreign key (uid) references users(uid) on delete cascade
+CREATE TABLE transactions (
+   tid INT AUTO_INCREMENT PRIMARY KEY,
+   productid BIGINT(20) UNSIGNED NOT NULL,  
+   userid INT NOT NULL,                      
+   quantity INT NOT NULL,
+   type ENUM('stock-in', 'stock-out') NOT NULL,
+   timestamp TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+   FOREIGN KEY (productid) REFERENCES product(ProductId) ON DELETE CASCADE,
+   FOREIGN KEY (userid) REFERENCES Users(UserId) ON DELETE CASCADE
 );
+
 
 
 
