@@ -13,7 +13,7 @@ CORS(app)
 
 # Configuration
 PORT = 5000
-JWT_SECRET = 'your_jwt_secret_key'  # Replace with a secure key
+JWT_SECRET = '12345'  # Replace with a secure key
 
 # MySQL connection pooling
 db_config = {
@@ -39,6 +39,18 @@ def query(sql, params=None):
         print(f"Error: {err}")
         raise
 
+def execute(sql, params=None):
+    try:
+        connection = connection_pool.get_connection()
+        cursor = connection.cursor()
+        cursor.execute(sql, params)
+        connection.commit()
+        cursor.close()
+        connection.close()
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        raise
+
 # Token required decorator
 def token_required(f):
     @wraps(f)
@@ -51,7 +63,7 @@ def token_required(f):
 
         try:
             data = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            current_user = data['id']
+            current_user = data
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token has expired'}), 401
         except jwt.InvalidTokenError:
@@ -69,10 +81,20 @@ def register():
     username = data['username']
     password = data['password']
     role = data['role']
-    
+    first_name = data['firstName']
+    last_name = data['lastName']
+    phone = data.get('phone')
+    email = data.get('email')
+
     try:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        query('INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)', (username, hashed_password, role))
+        execute(
+            '''
+            INSERT INTO Users (UserName, Password, FirstName, LastName, Role, Phone, Email) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''',
+            (username, hashed_password, first_name, last_name, role, phone, email)
+        )
         return jsonify({'message': 'User registered successfully'}), 201
     except Exception as err:
         return jsonify({'error': 'Error registering user'}), 400
@@ -82,19 +104,19 @@ def login():
     data = request.get_json()
     username = data['username']
     password = data['password']
-    
+
     try:
-        users = query('SELECT * FROM users WHERE username = %s', (username,))
+        users = query('SELECT * FROM Users WHERE UserName = %s', (username,))
         user = users[0] if users else None
-        if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+        if not user or not bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
             return jsonify({'error': 'Invalid credentials'}), 401
-        
+
         token = jwt.encode({
-            'id': user['id'],
-            'role': user['role'],
+            'id': user['UserId'],
+            'role': user['Role'],
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
         }, JWT_SECRET, algorithm='HS256')
-        
+
         return jsonify({'token': token})
     except Exception as err:
         return jsonify({'error': 'Error logging in'}), 500
@@ -104,7 +126,7 @@ def login():
 @token_required
 def get_products(current_user):
     try:
-        products = query('SELECT * FROM products')
+        products = query('SELECT * FROM product')
         return jsonify(products)
     except Exception as err:
         return jsonify({'error': 'Error fetching products'}), 500
@@ -114,18 +136,58 @@ def get_products(current_user):
 def add_product(current_user):
     data = request.get_json()
     name = data['name']
-    category = data['category']
-    stock_level = data['stockLevel']
-    reorder_point = data['reorderPoint']
-    
+    description = data.get('description')
+    product_image = data.get('productImage')
+    category = data.get('productCategoryName')
+    model_number = data.get('modelNumber')
+    serial_number = data.get('serialNumber')
+    stock_level = data.get('stockLevel')
+    reorder_point = data.get('reorderPoint')
+    supplier_id = data.get('supplierId')
+
     try:
-        query(
-            'INSERT INTO products (name, category, stock_level, reorder_point) VALUES (%s, %s, %s, %s)',
-            (name, category, stock_level, reorder_point)
+        execute(
+            '''
+            INSERT INTO product (ProductName, Description, ProductImage, ProductCategoryName, 
+                                 ModelNumber, SerialNumber, StockLevel, ReorderPoint, SupplierId)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''',
+            (name, description, product_image, category, model_number, serial_number, stock_level, reorder_point, supplier_id)
         )
         return jsonify({'message': 'Product added successfully'}), 201
     except Exception as err:
         return jsonify({'error': 'Error adding product'}), 400
+
+# Supplier routes
+@app.route('/suppliers', methods=['GET'])
+@token_required
+def get_suppliers(current_user):
+    try:
+        suppliers = query('SELECT * FROM supplier')
+        return jsonify(suppliers)
+    except Exception as err:
+        return jsonify({'error': 'Error fetching suppliers'}), 500
+
+@app.route('/transactions', methods=['POST'])
+@token_required
+def create_transaction(current_user):
+    data = request.get_json()
+    product_id = data['productId']
+    quantity = data['quantity']
+    transaction_type = data['type']
+    user_id = current_user['id']
+
+    try:
+        execute(
+            '''
+            INSERT INTO transactions (productid, userid, quantity, type)
+            VALUES (%s, %s, %s, %s)
+            ''',
+            (product_id, user_id, quantity, transaction_type)
+        )
+        return jsonify({'message': 'Transaction recorded successfully'}), 201
+    except Exception as err:
+        return jsonify({'error': 'Error recording transaction'}), 400
 
 # Start the server
 if __name__ == '__main__':
